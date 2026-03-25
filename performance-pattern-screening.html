@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Performance Pattern Screening</title>
+<style>
+/* ── Reset ────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f7f7f5;
+  --surface:   #ffffff;
+  --border:    #e4e4e0;
+  --text-1:    #141413;
+  --text-2:    #595956;
+  --text-3:    #9b9b97;
+  --accent:    #3d6b8e;
+  --accent-lt: #dce9f2;
+  --green:     #2d7a4a;
+  --green-lt:  #e6f4ec;
+  --amber:     #92600a;
+  --amber-lt:  #fef3e2;
+  --red:       #b04a3a;
+  --red-lt:    #fde8e6;
+  --radius:    12px;
+  --radius-lg: 20px;
+  --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+  --tr:        220ms cubic-bezier(.4,0,.2,1);
+  --max-w:     660px;
+  --font: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text-1);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Top progress bar (screen flow) ─────────────────── */
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 2px;
+  background: var(--accent); width: 0;
+  transition: width .45s cubic-bezier(.4,0,.2,1);
+  z-index: 100;
+}
+
+/* ── Screens ─────────────────────────────────────────── */
+.screen { display: none; min-height: 100vh; padding: 0 24px 80px; animation: fadeUp .3s ease both; }
+.screen.active { display: block; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.container { max-width: var(--max-w); margin: 0 auto; padding-top: 68px; }
+
+/* ── Typography ──────────────────────────────────────── */
+.eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
+}
+h1 {
+  font-size: clamp(26px, 5vw, 42px); font-weight: 300;
+  letter-spacing: -.022em; line-height: 1.15; color: var(--text-1); margin-bottom: 18px;
+}
+h2 {
+  font-size: clamp(19px, 3.5vw, 26px); font-weight: 400;
+  letter-spacing: -.015em; color: var(--text-1); margin-bottom: 10px;
+}
+.lead {
+  font-size: clamp(14px, 2vw, 16px); font-weight: 400;
+  color: var(--text-2); max-width: 520px; line-height: 1.72; margin-bottom: 44px;
+}
+p { color: var(--text-2); font-size: 14px; line-height: 1.7; }
+
+/* ── Disclaimer ──────────────────────────────────────── */
+.disclaimer {
+  font-size: 10px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--text-3); background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 14px; margin-bottom: 52px;
+  display: inline-block; line-height: 1.5; max-width: 460px;
+}
+
+/* ── Buttons ─────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 26px; border-radius: var(--radius);
+  font-size: 14px; font-weight: 500; font-family: var(--font);
+  letter-spacing: -.01em; cursor: pointer; border: none;
+  transition: all var(--tr); text-decoration: none; white-space: nowrap;
+}
+.btn-primary { background: var(--text-1); color: #fff; }
+.btn-primary:hover { background: #2c2c2a; transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--surface); border-color: #c4c4c0; }
+.btn-ghost { background: transparent; color: var(--text-3); border: 1px solid var(--border); font-size: 13px; }
+.btn-ghost:hover { background: var(--surface); }
+.btn-outline-accent { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+.btn-outline-accent:hover { background: var(--accent-lt); }
+.btn-lg { padding: 15px 32px; font-size: 15px; border-radius: 14px; }
+.btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 36px; }
+
+/* ── Option cards ────────────────────────────────────── */
+.option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+@media (max-width: 440px) { .option-grid { grid-template-columns: 1fr; } }
+
+.option-card {
+  background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-lg);
+  padding: 22px 20px; cursor: pointer; text-align: left; font-family: var(--font);
+  transition: all var(--tr);
+}
+.option-card:hover { border-color: #bfbfbb; box-shadow: var(--shadow); transform: translateY(-1px); }
+.option-card.selected { border-color: var(--accent); background: var(--accent-lt); }
+.option-card .opt-icon { font-size: 22px; margin-bottom: 10px; display: block; }
+.option-card .opt-label { font-size: 15px; font-weight: 500; color: var(--text-1); }
+.option-card .opt-sub   { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+
+/* ── Chips ───────────────────────────────────────────── */
+.chip-group { display: flex; flex-wrap: wrap; gap: 9px; margin: 14px 0 28px; }
+.chip {
+  padding: 9px 18px; border-radius: 100px; border: 1.5px solid var(--border);
+  background: var(--surface); font-size: 13px; font-weight: 500; color: var(--text-2);
+  cursor: pointer; transition: all var(--tr); font-family: var(--font); user-select: none;
+}
+.chip:hover { border-color: #b0b0aa; }
+.chip.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── Form ────────────────────────────────────────────── */
+.form-group { margin-bottom: 26px; }
+.form-label {
+  display: block; font-size: 11px; font-weight: 600; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 10px;
+}
+select, input[type="number"] {
+  width: 100%; max-width: 340px; padding: 12px 16px;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  font-size: 14px; font-family: var(--font); color: var(--text-1);
+  background: var(--surface); appearance: none; -webkit-appearance: none; outline: none;
+  transition: border-color var(--tr);
+}
+select:focus, input[type="number"]:focus { border-color: var(--accent); }
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239b9b97' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 40px; cursor: pointer;
+}
+.field-error { font-size: 12px; color: var(--red); margin-top: 8px; display: none; }
+.field-error.visible { display: block; }
+
+/* ══════════════════════════════════════════════════════
+   INSTRUCTIONS SCREEN — special passive styling
+══════════════════════════════════════════════════════ */
+
+/* Big "just read" banner — unmissable */
+.passive-notice {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: #f0f6fb; border: 1.5px solid #b8d4e8;
+  border-radius: var(--radius-lg); padding: 20px 22px;
+  margin-bottom: 32px;
+}
+.passive-notice-icon {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0; margin-top: 1px;
+}
+.passive-notice-text strong {
+  display: block; font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 4px;
+}
+.passive-notice-text p {
+  font-size: 13px; color: #3a5a72; margin: 0; line-height: 1.55;
+}
+
+.instructions-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 28px 32px; margin-bottom: 36px;
+}
+.instr-intro { font-size: 14px; color: var(--text-2); margin-bottom: 20px; line-height: 1.7; }
+
+.scale-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
+@media (max-width: 480px) { .scale-grid { grid-template-columns: 1fr 1fr; gap: 6px; } }
+.scale-item { background: var(--bg); border-radius: 8px; padding: 12px 8px; text-align: center; }
+.scale-num   { font-size: 20px; font-weight: 300; color: var(--text-1); margin-bottom: 5px; }
+.scale-label { font-size: 10px; color: var(--text-3); line-height: 1.35; }
+
+/* ══════════════════════════════════════════════════════
+   ITEMS SCREEN — segmented progress bar
+══════════════════════════════════════════════════════ */
+
+/* Segmented bar — 10 slots */
+.seg-bar-wrap {
+  margin-bottom: 30px;
+}
+.seg-bar-top {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 9px;
+}
+.seg-bar-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-3);
+}
+.seg-bar-count { font-size: 11px; color: var(--text-3); }
+.seg-bar {
+  display: flex; gap: 4px;
+}
+.seg {
+  flex: 1; height: 4px; border-radius: 3px;
+  background: var(--border); transition: background .3s ease;
+}
+.seg.done    { background: var(--accent); }
+.seg.current { background: var(--accent); opacity: .5; }
+
+.question-block {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 36px 32px 30px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+.q-text {
+  font-size: clamp(17px, 2.5vw, 21px); font-weight: 400;
+  letter-spacing: -.01em; color: var(--text-1); line-height: 1.4; margin-bottom: 34px;
+}
+
+.likert { display: flex; gap: 9px; justify-content: center; }
+@media (max-width: 520px) { .likert { gap: 6px; } }
+.likert-btn {
+  flex: 1; max-width: 78px; aspect-ratio: 1;
+  border-radius: 10px; border: 1.5px solid var(--border);
+  background: var(--bg); font-size: 16px; font-weight: 400;
+  color: var(--text-2); cursor: pointer; font-family: var(--font);
+  transition: all var(--tr); display: flex; align-items: center; justify-content: center;
+}
+.likert-btn:hover  { border-color: var(--accent); color: var(--accent); background: var(--accent-lt); }
+.likert-btn.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.likert-labels { display: flex; justify-content: space-between; margin-top: 10px; padding: 0 2px; }
+.likert-labels span { font-size: 10px; color: var(--text-3); max-width: 80px; text-align: center; }
+
+/* ══════════════════════════════════════════════════════
+   RESULTS — unified profile card
+══════════════════════════════════════════════════════ */
+
+.divider { border: none; border-top: 1px solid var(--border); margin: 44px 0; }
+
+/* Single unified profile card */
+.profile-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 0; overflow: hidden;
+  margin-bottom: 40px;
+}
+.profile-card-header {
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.profile-card-header h3 {
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-3); margin: 0;
+}
+.profile-card-header span { font-size: 11px; color: var(--text-3); }
+
+/* Factor score strips — above chart */
+.factor-strips { padding: 20px 28px 0; display: flex; flex-direction: column; gap: 11px; }
+.factor-strip { display: flex; align-items: center; gap: 12px; }
+.fs-name  { font-size: 12px; font-weight: 500; color: var(--text-2); min-width: 110px; }
+.fs-bar-wrap { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.fs-bar   { height: 100%; border-radius: 3px; transition: width .9s cubic-bezier(.4,0,.2,1); }
+.fs-bar.factor-n { background: var(--red); }
+.fs-bar.factor-e { background: var(--accent); }
+.fs-bar.factor-o { background: #7a5e9e; }
+.fs-bar.factor-a { background: var(--green); }
+.fs-bar.factor-c { background: #8a6a3a; }
+.fs-score { font-size: 12px; font-weight: 600; color: var(--text-1); min-width: 36px; text-align: right; }
+.fs-band  {
+  font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: 2px 9px; border-radius: 100px; min-width: 36px; text-align: center; flex-shrink: 0;
+}
+/* For N, high is cautionary */
+.fs-band.n-high { background: var(--red-lt);   color: var(--red); }
+.fs-band.n-mid  { background: var(--amber-lt); color: var(--amber); }
+.fs-band.n-low  { background: var(--green-lt); color: var(--green); }
+/* For others, high is positive */
+.fs-band.hi  { background: var(--green-lt); color: var(--green); }
+.fs-band.mid { background: var(--amber-lt); color: var(--amber); }
+.fs-band.lo  { background: var(--red-lt);   color: var(--red); }
+
+/* Radar canvas below strips */
+.radar-area {
+  padding: 24px 28px 28px;
+  display: flex; justify-content: center;
+}
+
+/* ── Insight cards ───────────────────────────────────── */
+.insight-section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 16px;
+}
+
+.insight-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 26px 28px; margin-bottom: 14px;
+  transition: box-shadow var(--tr);
+}
+.insight-card:hover { box-shadow: var(--shadow); }
+
+.insight-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; gap: 14px; }
+.insight-title  { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.insight-tag {
+  font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 100px; white-space: nowrap; flex-shrink: 0;
+}
+.tag-red    { background: var(--red-lt);   color: var(--red); }
+.tag-amber  { background: var(--amber-lt); color: var(--amber); }
+.tag-green  { background: var(--green-lt); color: var(--green); }
+.tag-blue   { background: var(--accent-lt); color: var(--accent); }
+
+/* Short summary line */
+.insight-summary {
+  font-size: 14px; font-weight: 500; color: var(--text-1);
+  margin-bottom: 8px; line-height: 1.5;
+}
+.insight-body { font-size: 13px; color: var(--text-2); line-height: 1.72; margin-bottom: 14px; }
+.insight-rec {
+  background: var(--bg); border-left: 2px solid var(--accent);
+  padding: 11px 14px; border-radius: 0 8px 8px 0;
+  font-size: 13px; color: var(--text-2); line-height: 1.65;
+}
+.insight-rec strong {
+  color: var(--text-3); font-weight: 600; display: block; margin-bottom: 3px;
+  font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+}
+
+.metric-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+}
+.metric-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); }
+.metric-value { font-size: 12px; font-weight: 600; }
+.metric-note  { font-size: 11px; color: var(--text-3); }
+
+/* ── Locked section ──────────────────────────────────── */
+.locked-section { margin-top: 64px; }
+.locked-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.locked-icon {
+  width: 32px; height: 32px; border-radius: 8px; background: var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.locked-title { font-size: 17px; font-weight: 400; letter-spacing: -.01em; }
+.locked-sub   { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+.locked-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 540px) { .locked-grid { grid-template-columns: 1fr; } }
+
+.locked-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 22px 18px; position: relative; overflow: hidden;
+}
+.locked-card-title { font-size: 13px; font-weight: 600; color: var(--text-1); margin-bottom: 8px; }
+.locked-blur { filter: blur(4px); color: var(--text-3); font-size: 12px; line-height: 1.6; user-select: none; }
+.locked-overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(247,247,245,.55); backdrop-filter: blur(1px);
+}
+.lock-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 100px; padding: 5px 13px;
+  font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3);
+}
+
+.cta-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 36px 28px; text-align: center;
+}
+.cta-block h3 { font-size: 17px; font-weight: 400; margin-bottom: 8px; }
+.cta-block p  { font-size: 13px; color: var(--text-3); margin-bottom: 26px; max-width: 400px; margin-left: auto; margin-right: auto; }
+.cta-buttons  { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ── Restart block ───────────────────────────────────── */
+.restart-block {
+  margin-top: 56px; padding-top: 32px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.restart-label { font-size: 12px; color: var(--text-3); }
+
+/* ── Footer ──────────────────────────────────────────── */
+.proto-footer {
+  text-align: center; padding: 32px 24px 0;
+  font-size: 11px; letter-spacing: .04em; color: var(--text-3); margin-top: 32px;
+}
+
+/* ── Step label ──────────────────────────────────────── */
+.step-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-3); margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 0 — INTRO
+══════════════════════════════════════════════════ -->
+<div id="screen-intro" class="screen active">
+  <div class="container">
+    <div class="disclaimer">
+      Disclaimer — This is a prototype. Questions are reduced and shortened and will not give you real clinical or diagnostic insight.
+    </div>
+    <div class="eyebrow">TheLAB Performance Psychology</div>
+    <h1>Performance Pattern<br>Screening</h1>
+    <p class="lead">A short prototype that maps selected personality tendencies to performance-relevant insights in sport.</p>
+    <button class="btn btn-primary btn-lg" onclick="goTo('screen-sport')">
+      Start Screening
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 1 — SPORT
+══════════════════════════════════════════════════ -->
+<div id="screen-sport" class="screen">
+  <div class="container">
+    <div class="step-label">Step 1 of 4 — Context</div>
+    <h2>What is your main sport?</h2>
+    <p class="lead" style="margin-bottom:28px;">Your responses will be interpreted in relation to your sport and role.</p>
+
+    <div class="option-grid">
+      <button class="option-card" id="opt-soccer" onclick="selectSport('soccer')">
+        <span class="opt-icon">⚽</span>
+        <div class="opt-label">Soccer</div>
+        <div class="opt-sub">Team sport context</div>
+      </button>
+      <button class="option-card" id="opt-golf" onclick="selectSport('golf')">
+        <span class="opt-icon">⛳</span>
+        <div class="opt-label">Golf</div>
+        <div class="opt-sub">Individual sport context</div>
+      </button>
+    </div>
+
+    <p id="sport-error" class="field-error">Please select a sport to continue.</p>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goTo('screen-intro')">Back</button>
+      <button class="btn btn-primary" onclick="nextFromSport()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 2a — SOCCER CONTEXT
+══════════════════════════════════════════════════ -->
+<div id="screen-context-soccer" class="screen">
+  <div class="container">
+    <div class="step-label">Step 2 of 4 — Role</div>
+    <h2>Your role in the game</h2>
+    <p class="lead" style="margin-bottom:32px;">This helps contextualise performance demands specific to your position.</p>
+
+    <div class="form-group">
+      <label class="form-label" for="soccer-position">What position do you play?</label>
+      <select id="soccer-position">
+        <option value="">Select position</option>
+        <option>Goalkeeper</option>
+        <option>Centre-back</option>
+        <option>Full-back / Wing-back</option>
+        <option>Defensive midfielder</option>
+        <option>Central midfielder</option>
+        <option>Attacking midfielder</option>
+        <option>Winger</option>
+        <option>Striker / Centre-forward</option>
+      </select>
+      <p id="pos-error" class="field-error">Please select your position.</p>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Additional roles you are currently fulfilling?</label>
+      <div class="chip-group" id="soccer-roles">
+        <div class="chip" onclick="toggleChip(this,'Team Captain')">Team Captain</div>
+        <div class="chip" onclick="toggleChip(this,'Playing Coach')">Playing Coach</div>
+        <div class="chip" onclick="toggleChip(this,'Other')">Other</div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goTo('screen-sport')">Back</button>
+      <button class="btn btn-primary" onclick="nextFromSoccerContext()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 2b — GOLF CONTEXT
+══════════════════════════════════════════════════ -->
+<div id="screen-context-golf" class="screen">
+  <div class="container">
+    <div class="step-label">Step 2 of 4 — Context</div>
+    <h2>Your game profile</h2>
+    <p class="lead" style="margin-bottom:32px;">Your handicap gives context to the performance demands of your level.</p>
+
+    <div class="form-group">
+      <label class="form-label" for="golf-handicap">What is your current handicap?</label>
+      <input type="number" id="golf-handicap" min="-10" max="54" placeholder="e.g. 8" />
+      <p id="hcp-error" class="field-error">Please enter a handicap to continue.</p>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goTo('screen-sport')">Back</button>
+      <button class="btn btn-primary" onclick="nextFromGolfContext()">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 3 — INSTRUCTIONS (passive — no input)
+══════════════════════════════════════════════════ -->
+<div id="screen-instructions" class="screen">
+  <div class="container">
+    <div class="step-label">Step 3 of 4 — Before you start</div>
+
+    <!-- PROMINENT passive notice — must appear before the scale -->
+    <div class="passive-notice">
+      <div class="passive-notice-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div class="passive-notice-text">
+        <strong>Just read this page — no selections needed yet</strong>
+        <p>The actual statements begin on the next screen. This page just explains the response scale so you know what to expect.</p>
+      </div>
+    </div>
+
+    <div class="instructions-box">
+      <p class="instr-intro">
+        You will see <strong>10 short statements</strong>. For each one, choose how accurately it describes you right now — not how you would like to be. Use the 1–5 scale below:
+      </p>
+      <div class="scale-grid">
+        <div class="scale-item"><div class="scale-num">1</div><div class="scale-label">Very Inaccurate</div></div>
+        <div class="scale-item"><div class="scale-num">2</div><div class="scale-label">Moderately Inaccurate</div></div>
+        <div class="scale-item"><div class="scale-num">3</div><div class="scale-label">Neither</div></div>
+        <div class="scale-item"><div class="scale-num">4</div><div class="scale-label">Moderately Accurate</div></div>
+        <div class="scale-item"><div class="scale-num">5</div><div class="scale-label">Very Accurate</div></div>
+      </div>
+    </div>
+
+    <p style="font-size:13px;color:var(--text-3);">Takes approximately 2–3 minutes. Press <strong style="color:var(--text-2);">Start</strong> when ready.</p>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="goContextBack()">Back</button>
+      <button class="btn btn-primary btn-lg" onclick="startItems()">
+        Start Screening
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 4 — ITEMS
+══════════════════════════════════════════════════ -->
+<div id="screen-items" class="screen">
+  <div class="container">
+
+    <!-- Segmented progress bar — rendered by JS -->
+    <div id="item-progress-wrap"></div>
+
+    <div id="item-container"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="item-back-btn" onclick="prevItem()">Back</button>
+      <button class="btn btn-primary" id="item-next-btn" onclick="nextItem()">Continue</button>
+    </div>
+    <p id="item-error" class="field-error" style="margin-top:10px;">Please select a response to continue.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 5 — RESULTS
+══════════════════════════════════════════════════ -->
+<div id="screen-results" class="screen">
+  <div class="container">
+
+    <div class="eyebrow">Performance Profile</div>
+    <h1 style="margin-bottom:12px;">Your Performance<br>Profile</h1>
+    <p class="lead">A prototype view of how selected personality tendencies may relate to performance under pressure.</p>
+
+    <!-- ── Unified profile card: factor bars + radar ── -->
+    <div class="profile-card">
+      <div class="profile-card-header">
+        <h3>Personality Factor Overview</h3>
+      </div>
+      <div class="factor-strips" id="factor-strips"></div>
+      <div class="radar-area">
+        <canvas id="radarCanvas"></canvas>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── Insight cards ── -->
+    <div class="insight-section-label">What this means for your performance</div>
+    <div id="insight-cards"></div>
+
+    <!-- ── Combined locked + unlock section (rendered by JS) ── -->
+    <div class="locked-section" id="locked-section"></div>
+
+    <!-- ── Restart ── -->
+    <div class="restart-block">
+      <div class="restart-label">Testing or want to try different answers?</div>
+      <button class="btn btn-ghost" onclick="restartScreening()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        Restart from the beginning
+      </button>
+    </div>
+
+    <div class="proto-footer">
+      Performance Pattern Screening — Prototype · TheLAB Performance Psychology · Not for clinical use
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════ -->
+<script>
+/* ── State ──────────────────────────────────────────── */
+const state = {
+  sport: null, position: null, handicap: null,
+  roles: [], answers: {}, currentItem: 0,
+};
+
+/* ── Items ──────────────────────────────────────────── */
+const items = [
+  { id:'N1', text:'Worry about things.',                          factor:'N', reverse:false },
+  { id:'N2', text:'Get angry easily.',                            factor:'N', reverse:false },
+  { id:'E1', text:'Act comfortably with others.',                 factor:'E', reverse:false },
+  { id:'E2', text:'Try to lead others.',                          factor:'E', reverse:false },
+  { id:'O1', text:'Am not interested in theoretical discussions.',factor:'O', reverse:true  },
+  { id:'O2', text:'Have a vivid imagination.',                    factor:'O', reverse:false },
+  { id:'A1', text:'Get back at others.',                          factor:'A', reverse:true  },
+  { id:'A2', text:'Trust others.',                                factor:'A', reverse:false },
+  { id:'C1', text:'Know how to get things done.',                 factor:'C', reverse:false },
+  { id:'C2', text:'Carry out my plans.',                          factor:'C', reverse:false },
+];
+
+const FACTOR_META = {
+  N: { name:'Neuroticism',       cls:'factor-n' },
+  E: { name:'Extraversion',      cls:'factor-e' },
+  O: { name:'Openness',          cls:'factor-o' },
+  A: { name:'Agreeableness',     cls:'factor-a' },
+  C: { name:'Conscientiousness', cls:'factor-c' },
+};
+
+/* ── Navigation ─────────────────────────────────────── */
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top:0, behavior:'smooth' });
+  updateTopBar();
+}
+
+function updateTopBar() {
+  const order = ['screen-intro','screen-sport','screen-context-soccer','screen-context-golf',
+                  'screen-instructions','screen-items','screen-results'];
+  const idx = order.indexOf(document.querySelector('.screen.active').id);
+  document.getElementById('progress-bar').style.width =
+    (idx <= 0 ? 0 : Math.round((idx / (order.length-1)) * 100)) + '%';
+}
+
+/* ── Sport ───────────────────────────────────────────── */
+function selectSport(s) {
+  state.sport = s;
+  document.getElementById('opt-soccer').classList.toggle('selected', s==='soccer');
+  document.getElementById('opt-golf').classList.toggle('selected', s==='golf');
+  document.getElementById('sport-error').classList.remove('visible');
+}
+function nextFromSport() {
+  if (!state.sport) { document.getElementById('sport-error').classList.add('visible'); return; }
+  goTo(state.sport==='soccer' ? 'screen-context-soccer' : 'screen-context-golf');
+}
+
+/* ── Chips ───────────────────────────────────────────── */
+function toggleChip(el, role) {
+  el.classList.toggle('selected');
+  if (el.classList.contains('selected')) { if(!state.roles.includes(role)) state.roles.push(role); }
+  else { state.roles = state.roles.filter(r => r!==role); }
+}
+
+/* ── Context ─────────────────────────────────────────── */
+function nextFromSoccerContext() {
+  const pos = document.getElementById('soccer-position').value;
+  if (!pos) { document.getElementById('pos-error').classList.add('visible'); return; }
+  document.getElementById('pos-error').classList.remove('visible');
+  state.position = pos;
+  goTo('screen-instructions');
+}
+function nextFromGolfContext() {
+  const hcp = document.getElementById('golf-handicap').value;
+  if (hcp==='') { document.getElementById('hcp-error').classList.add('visible'); return; }
+  document.getElementById('hcp-error').classList.remove('visible');
+  state.handicap = parseFloat(hcp);
+  goTo('screen-instructions');
+}
+function goContextBack() {
+  goTo(state.sport==='soccer' ? 'screen-context-soccer' : 'screen-context-golf');
+}
+
+/* ── Items ───────────────────────────────────────────── */
+function startItems() { state.currentItem=0; renderItem(0); goTo('screen-items'); }
+
+function renderSegBar(idx) {
+  const segs = items.map((_,di) => {
+    let cls='seg';
+    if (di < idx)  cls += ' done';
+    else if (di===idx) cls += ' current';
+    return `<div class="${cls}"></div>`;
+  }).join('');
+  document.getElementById('item-progress-wrap').innerHTML = `
+    <div class="seg-bar-wrap">
+      <div class="seg-bar-top">
+        <span class="seg-bar-label">Statements</span>
+        <span class="seg-bar-count">${idx+1} of ${items.length}</span>
+      </div>
+      <div class="seg-bar">${segs}</div>
+    </div>`;
+}
+
+function renderItem(idx) {
+  const item  = items[idx];
+  const saved = state.answers[idx];
+
+  renderSegBar(idx);
+
+  document.getElementById('item-container').innerHTML = `
+    <div class="question-block">
+      <div class="q-text">${item.text}</div>
+      <div class="likert" id="likert-${idx}">
+        ${[1,2,3,4,5].map(v=>`
+          <button class="likert-btn ${saved===v?'selected':''}"
+                  onclick="selectAnswer(${idx},${v})"
+                  aria-label="${v}">${v}</button>`).join('')}
+      </div>
+      <div class="likert-labels">
+        <span>Very<br>Inaccurate</span>
+        <span>Very<br>Accurate</span>
+      </div>
+    </div>`;
+
+  document.getElementById('item-back-btn').style.display = idx===0 ? 'none' : '';
+  document.getElementById('item-next-btn').textContent   = idx===items.length-1 ? 'View My Profile →' : 'Continue';
+  document.getElementById('item-error').classList.remove('visible');
+}
+
+function selectAnswer(idx, val) {
+  state.answers[idx] = val;
+  document.querySelectorAll(`#likert-${idx} .likert-btn`).forEach((b,i)=>{
+    b.classList.toggle('selected', i+1===val);
+  });
+  document.getElementById('item-error').classList.remove('visible');
+}
+
+function nextItem() {
+  const idx = state.currentItem;
+  if (state.answers[idx]===undefined) { document.getElementById('item-error').classList.add('visible'); return; }
+  if (idx===items.length-1) { computeAndShowResults(); return; }
+  state.currentItem++;
+  renderItem(state.currentItem);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function prevItem() {
+  if (state.currentItem>0) { state.currentItem--; renderItem(state.currentItem); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+
+/* ── Scoring ─────────────────────────────────────────── */
+function scoreItem(idx) {
+  const raw = state.answers[idx] || 3;
+  return items[idx].reverse ? (6-raw) : raw;
+}
+function computeScores() {
+  const s={N:0,E:0,O:0,A:0,C:0};
+  items.forEach((_,i) => s[items[i].factor] += scoreItem(i));
+  return s;
+}
+function band(score, isN=false) {
+  // For Neuroticism, high = cautionary (red), low = good (green)
+  const hi = score>=8, lo = score<=4;
+  if (isN) return hi?'High':lo?'Low':'Mid';
+  return hi?'High':lo?'Low':'Mid';
+}
+
+/* ── Results ─────────────────────────────────────────── */
+function computeAndShowResults() {
+  const scores = computeScores();
+  renderFactorStrips(scores);
+  setTimeout(() => drawRadar(scores), 60); // allow layout paint
+  renderInsights(scores);
+  goTo('screen-results');
+}
+
+/* Factor strips */
+function renderFactorStrips(scores) {
+  const order = ['N','E','O','A','C'];
+  document.getElementById('factor-strips').innerHTML = order.map(k => {
+    const s   = scores[k];
+    const pct = Math.round(((s-2)/8)*100);
+    const b   = band(s, k==='N');
+    let bandCls, bandLabel;
+    if (k==='N') {
+      bandCls   = b==='High'?'n-high':b==='Mid'?'n-mid':'n-low';
+      bandLabel = b;
+    } else {
+      bandCls   = b==='High'?'hi':b==='Mid'?'mid':'lo';
+      bandLabel = b;
+    }
+    return `<div class="factor-strip">
+      <div class="fs-name">${FACTOR_META[k].name}</div>
+      <div class="fs-bar-wrap"><div class="fs-bar ${FACTOR_META[k].cls}" style="width:${pct}%"></div></div>
+      <div class="fs-score">${s}/10</div>
+      <div class="fs-band ${bandCls}">${bandLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+/* Radar */
+function drawRadar(scores) {
+  const canvas = document.getElementById('radarCanvas');
+  const ctx    = canvas.getContext('2d');
+  const dpr    = window.devicePixelRatio || 1;
+  const W      = Math.min(380, window.innerWidth - 80);
+  const H      = W;
+  canvas.style.width  = W+'px';
+  canvas.style.height = H+'px';
+  canvas.width  = W*dpr;
+  canvas.height = H*dpr;
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const cx=W/2, cy=H/2, R=Math.min(cx,cy)*0.52;
+  const factors=['N','E','O','A','C'];
+  const labels =['Neuroticism','Extraversion','Openness','Agreeableness','Conscientiousness'];
+  const n=factors.length;
+  const angle = i => (Math.PI*2/n)*i - Math.PI/2;
+  const pt    = (i,r) => ({ x: cx+r*Math.cos(angle(i)), y: cy+r*Math.sin(angle(i)) });
+
+  // Grid rings
+  [2,4,6,8,10].forEach(lvl=>{
+    const r = R*((lvl-2)/8+0.04);
+    ctx.beginPath();
+    for(let i=0;i<n;i++){const p=pt(i,r);i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);}
+    ctx.closePath();
+    ctx.strokeStyle = lvl===10?'#d4d4d0':'#ebebea';
+    ctx.lineWidth=1; ctx.stroke();
+  });
+
+  // Spokes
+  factors.forEach((_,i)=>{
+    const p=pt(i,R);
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle='#e8e8e4'; ctx.lineWidth=1; ctx.stroke();
+  });
+
+  // Data polygon
+  ctx.beginPath();
+  factors.forEach((f,i)=>{
+    const norm=(scores[f]-2)/8;
+    const p=pt(i,R*(norm*0.96+0.04));
+    i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+  });
+  ctx.closePath();
+  ctx.fillStyle='rgba(61,107,142,0.13)';ctx.fill();
+  ctx.strokeStyle='#3d6b8e';ctx.lineWidth=2;ctx.stroke();
+
+  // Dots
+  factors.forEach((f,i)=>{
+    const norm=(scores[f]-2)/8;
+    const p=pt(i,R*(norm*0.96+0.04));
+    ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);
+    ctx.fillStyle='#3d6b8e';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+  });
+
+  // Labels only — no score, padded outward so nothing clips
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const labelR = R + 34;
+  labels.forEach((lbl,i)=>{
+    const p = pt(i, labelR);
+    ctx.font=`500 10.5px -apple-system,sans-serif`;
+    ctx.fillStyle='#595956';
+    const words = lbl.split(' ');
+    const lineH = 13;
+    const totalH = words.length * lineH;
+    const startY = p.y - (totalH - lineH) / 2;
+    words.forEach((w, wi) => ctx.fillText(w, p.x, startY + wi * lineH));
+  });
+}
+
+/* ── Insights (plain English) ───────────────────────── */
+function renderInsights(scores) {
+  const el = document.getElementById('insight-cards');
+  const cards = [];
+
+  const Nb = band(scores.N,'N');
+  const Eb = band(scores.E);
+  const Ab = band(scores.A);
+  const Cb = band(scores.C);
+  const imaginScore = scoreItem(5); // O_imag
+  const imaginHigh  = imaginScore >= 4;
+
+  /* 1 — How you react under pressure */
+  if (Nb === 'High') {
+    const choke = scores.N >= 9 ? 'Elevated' : 'Moderate';
+    cards.push(`
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-title">How you react under pressure</div>
+          <span class="insight-tag tag-red">Watch area</span>
+        </div>
+        <div class="insight-summary">You tend to feel pressure strongly — nerves, worry, or frustration are likely to show up in high-stakes moments.</div>
+        <div class="insight-body">
+          This isn't a weakness, but it does mean your performance is more likely to fluctuate when the stakes rise. Athletes with this profile often perform well in low-pressure training but can tighten up in competition — especially in moments that feel critical.
+        </div>
+        <div class="insight-rec">
+          <strong>What to try</strong>
+          Build a consistent pre-performance routine you can rely on — same warm-up, same reset cue, same breathing pattern. Having something automatic to fall back on reduces the chance that nerves take over.
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Choking susceptibility</span>
+          <span class="metric-value" style="color:var(--red)">${choke}</span>
+          <span class="metric-note">(Prototype estimate — not a clinical measure)</span>
+        </div>
+      </div>`);
+  } else if (Nb === 'Low') {
+    cards.push(`
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-title">How you react under pressure</div>
+          <span class="insight-tag tag-green">Strength area</span>
+        </div>
+        <div class="insight-summary">You tend to stay calm under pressure — nerves are unlikely to get in the way of your performance.</div>
+        <div class="insight-body">
+          Your emotional control is a genuine asset. You're less likely to tighten up or lose focus when the stakes rise. The thing to watch is the opposite: in very low-stakes situations, you may not be sufficiently switched on.
+        </div>
+        <div class="insight-rec">
+          <strong>What to try</strong>
+          Use energising cues before competition — music, a specific warm-up drill, or competitive self-talk — to make sure you're properly activated and not going through the motions.
+        </div>
+      </div>`);
+  } else {
+    cards.push(`
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-title">How you react under pressure</div>
+          <span class="insight-tag tag-amber">Moderate</span>
+        </div>
+        <div class="insight-summary">You handle pressure reasonably well, though some situations may still disrupt your focus.</div>
+        <div class="insight-body">
+          Your emotional response to pressure is in the middle range — you're unlikely to completely fall apart, but specific high-stakes moments (finals, penalties, tie-breakers) may still trip you up.
+        </div>
+        <div class="insight-rec">
+          <strong>What to try</strong>
+          Identify which specific situations make you tighten up and build a mental reset routine specifically for those moments.
+        </div>
+      </div>`);
+  }
+
+  /* 2 — What kind of mental preparation suits you */
+  cards.push(`
+    <div class="insight-card">
+      <div class="insight-header">
+        <div class="insight-title">What kind of mental preparation suits you</div>
+        <span class="insight-tag ${imaginHigh?'tag-blue':'tag-amber'}">${imaginHigh?'Imagery-friendly':'Routine-based'}</span>
+      </div>
+      <div class="insight-summary">${imaginHigh
+        ? 'You can likely benefit from mental rehearsal — picturing your performance before it happens.'
+        : 'Detailed visualisation is probably not your strongest tool — you do better with structure and habit.'}</div>
+      <div class="insight-body">${imaginHigh
+        ? 'Athletes with a strong imagination tend to respond well to techniques like visualisation, where you mentally rehearse exactly what you want to do before competing. Done well, this can sharpen focus and reduce uncertainty.'
+        : 'Not everyone gets much out of visualisation, and that\'s fine. You\'re more likely to benefit from clear, repeatable physical routines — the same sequence every time, before every competition.'}</div>
+      <div class="insight-rec">
+        <strong>What to try</strong>
+        ${imaginHigh
+          ? 'Before training or competition, spend 3–5 minutes mentally running through key moments in as much detail as possible — sights, sounds, how the action feels in your body.'
+          : 'Build a short pre-performance routine you never skip. Even 5 minutes of the same warm-up sequence, with a consistent focus cue at the end, can anchor your mindset effectively.'}
+      </div>
+    </div>`);
+
+  /* 3 — Your energy and environment */
+  const sportLabel = state.sport === 'soccer' ? '· Soccer' : '· Golf';
+  if (state.sport === 'soccer') {
+    if (Eb === 'Low') {
+      cards.push(`
+        <div class="insight-card">
+          <div class="insight-header">
+            <div class="insight-title">Your energy and team environment</div>
+            <span class="insight-tag tag-amber">Worth managing ${sportLabel}</span>
+          </div>
+          <div class="insight-summary">You're likely more quiet or reserved in team settings — and that's completely fine, but it's something to be aware of.</div>
+          <div class="insight-body">
+            Taking on heavy social or leadership roles — like captain, media duties, or player-coach — may drain your energy more than others, especially close to competition. This doesn't affect your ability to perform, but it does mean you need to manage your mental bandwidth more carefully.
+          </div>
+          <div class="insight-rec">
+            <strong>What to try</strong>
+            Be selective about taking on extra responsibilities around match days. A quieter, more independent pre-match routine will likely suit you better than a high-energy team warm-up.
+          </div>
+        </div>`);
+    } else {
+      cards.push(`
+        <div class="insight-card">
+          <div class="insight-header">
+            <div class="insight-title">Your energy and team environment</div>
+            <span class="insight-tag tag-green">Strength area ${sportLabel}</span>
+          </div>
+          <div class="insight-summary">You tend to get energy from the people around you — the team environment is likely a source of confidence, not drain.</div>
+          <div class="insight-body">
+            Social contact, communication, and visibility in the group are likely to support your performance rather than distract from it. Leadership and motivational roles may come naturally and can actually fuel your focus.
+          </div>
+          <div class="insight-rec">
+            <strong>What to try</strong>
+            Use the pre-match environment actively — connect with teammates, communicate your intent, take on vocal or leadership moments. The social energy is part of your preparation, not separate from it.
+          </div>
+        </div>`);
+    }
+  } else {
+    if (Eb === 'High') {
+      cards.push(`
+        <div class="insight-card">
+          <div class="insight-header">
+            <div class="insight-title">Your energy and performance environment</div>
+            <span class="insight-tag tag-blue">Connection-driven ${sportLabel}</span>
+          </div>
+          <div class="insight-summary">Golf is mostly a solo sport, but you get energy from people — long stretches of isolation could leave you flat.</div>
+          <div class="insight-body">
+            You perform better with regular feedback, human contact, and an engaged support structure. Preparing alone for long periods without connection or debrief may actually reduce your focus and enjoyment.
+          </div>
+          <div class="insight-rec">
+            <strong>What to try</strong>
+            Build a small team around your game — a coach, a trusted playing partner, or a psychologist you debrief with regularly. Social exchange and feedback can sharpen rather than disrupt your focus.
+          </div>
+        </div>`);
+    } else {
+      cards.push(`
+        <div class="insight-card">
+          <div class="insight-header">
+            <div class="insight-title">Your energy and performance environment</div>
+            <span class="insight-tag tag-green">Independent performer ${sportLabel}</span>
+          </div>
+          <div class="insight-summary">You likely perform better with space, calm, and minimal social noise before competition.</div>
+          <div class="insight-body">
+            Golf suits your natural style well. You don't need much social interaction to feel ready, and you may actually play better when you've had quiet preparation time without distractions.
+          </div>
+          <div class="insight-rec">
+            <strong>What to try</strong>
+            Protect your pre-round preparation. Keep it independent and consistent. Avoid unnecessary social obligations close to tee time that could disrupt your mental state.
+          </div>
+        </div>`);
+    }
+  }
+
+  /* 4 — Your consistency and follow-through */
+  if (Cb === 'High') {
+    cards.push(`
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-title">Your consistency and follow-through</div>
+          <span class="insight-tag tag-green">Strength area</span>
+        </div>
+        <div class="insight-summary">You tend to follow through on what you plan — one of the most underrated qualities in high performance.</div>
+        <div class="insight-body">
+          Consistency over time is often what separates athletes who reach their potential from those who don't — and this appears to be a genuine strength of yours. You're more likely to stick to preparation habits, training plans, and recovery routines than most.
+        </div>
+        <div class="insight-rec">
+          <strong>What to try</strong>
+          Use this strength deliberately — build structured preparation routines and review habits. Your follow-through means these structures will actually stick and compound over time.
+        </div>
+      </div>`);
+  } else {
+    cards.push(`
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-title">Your consistency and follow-through</div>
+          <span class="insight-tag tag-amber">Watch area</span>
+        </div>
+        <div class="insight-summary">You may find it harder to stay consistent — sticking to plans and routines over time can be a challenge.</div>
+        <div class="insight-body">
+          This is one of the most common performance limiters — not lack of ability, but inconsistency in preparation and follow-through. Even when motivation is high, athletes with this profile sometimes struggle to maintain habits over weeks and months.
+        </div>
+        <div class="insight-rec">
+          <strong>What to try</strong>
+          Keep your routines as simple as possible — fewer steps means fewer chances to skip something. Adding a light accountability structure (a coach check-in, a training log) can bridge the gap between intention and action.
+        </div>
+      </div>`);
+  }
+
+  /* 5 — How you relate to others (only for notable bands) */
+  if (Ab === 'Low') {
+    cards.push(`
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-title">How you relate to your team and coaches</div>
+          <span class="insight-tag tag-amber">Worth monitoring</span>
+        </div>
+        <div class="insight-summary">Your profile suggests you can be direct, sceptical, or even confrontational at times — which can be an asset, but also a friction point.</div>
+        <div class="insight-body">
+          A competitive edge and willingness to challenge others can be valuable in sport. The same traits can, however, create tension with teammates or coaches — particularly under pressure or after setbacks.
+        </div>
+        <div class="insight-rec">
+          <strong>What to try</strong>
+          Identify one or two people in your environment you genuinely trust and can be honest with. That anchor relationship gives you somewhere to direct your directness constructively without creating wider friction.
+        </div>
+      </div>`);
+  } else if (Ab === 'High') {
+    cards.push(`
+      <div class="insight-card">
+        <div class="insight-header">
+          <div class="insight-title">How you relate to your team and coaches</div>
+          <span class="insight-tag tag-green">Strength area</span>
+        </div>
+        <div class="insight-summary">You're easy to work with and cooperative — which supports good team chemistry and trust with coaches.</div>
+        <div class="insight-body">
+          This is a genuine relational strength. The potential downside is that you may avoid difficult conversations or hold back from advocating for your own needs when it matters.
+        </div>
+        <div class="insight-rec">
+          <strong>What to try</strong>
+          Practice being direct when it counts — asking for what you need, pushing back on things that aren't working for you. Agreeableness is a social strength, but top performers also know when to draw a line.
+        </div>
+      </div>`);
+  }
+
+  // Only show first 3 insight cards; rest are locked below
+  const visibleCards = cards.slice(0, 3);
+  const lockedCards  = cards.slice(3);
+
+  el.innerHTML = visibleCards.join('');
+
+  // ── Build combined locked + unlock section ──────────────
+  // Generate blurred previews from the remaining insight cards (4+)
+  // plus the 3 fixed locked deep-dive cards
+  const lockedInsightPreviews = lockedCards.map(html => {
+    // Extract title from html string
+    const titleMatch = html.match(/insight-title[^>]*>([^<]+)</);
+    const title = titleMatch ? titleMatch[1].trim() : 'Additional Insight';
+    const summaryMatch = html.match(/insight-summary[^>]*>([^<]+)</);
+    const summary = summaryMatch ? summaryMatch[1].trim() : '';
+    return `<div class="locked-card">
+      <div class="locked-card-title">${title}</div>
+      <div class="locked-blur">${summary || 'This insight is based on your full personality profile and sport context.'}</div>
+      <div class="locked-overlay"><span class="lock-badge">🔒 Locked</span></div>
+    </div>`;
+  }).join('');
+
+  const deepDiveCards = `
+    <div class="locked-card">
+      <div class="locked-card-title">Competition Pressure Breakdown</div>
+      <div class="locked-blur">Pre-competition anxiety curve, choking risk window, and activation benchmarking across high-stakes scenarios specific to your position and level.</div>
+      <div class="locked-overlay"><span class="lock-badge">🔒 Locked</span></div>
+    </div>
+    <div class="locked-card">
+      <div class="locked-card-title">Attention Control Profile</div>
+      <div class="locked-blur">Quiet Eye alignment score, attentional style under fatigue, and recommended gaze anchoring protocols based on your anxiety and openness profile.</div>
+      <div class="locked-overlay"><span class="lock-badge">🔒 Locked</span></div>
+    </div>
+    <div class="locked-card">
+      <div class="locked-card-title">Personalised Mental Skills Plan</div>
+      <div class="locked-blur">A 6-week structured intervention plan with routine design, self-talk protocols, and session-by-session progressions matched to your profile.</div>
+      <div class="locked-overlay"><span class="lock-badge">🔒 Locked</span></div>
+    </div>`;
+
+  document.getElementById('locked-section').innerHTML = `
+    <div class="locked-header">
+      <div class="locked-icon">🔒</div>
+      <div>
+        <div class="locked-title">Unlock Further Insights</div>
+        <div class="locked-sub">More of your performance profile + deeper analysis from TheLAB</div>
+      </div>
+    </div>
+    <div class="locked-grid">
+      ${lockedInsightPreviews}
+      ${deepDiveCards}
+    </div>
+    <div class="cta-block">
+      <h3>Work with a TheLAB Psychologist</h3>
+      <p>Receive a full interpretation, personalised plan, and ongoing support from a qualified applied sport psychologist.</p>
+      <div class="cta-buttons">
+        <button class="btn btn-primary btn-lg">Send Results to TheLAB Psychologist</button>
+        <button class="btn btn-outline-accent btn-lg">Book Insight Call</button>
+      </div>
+    </div>`;
+}
+
+/* ── Restart ─────────────────────────────────────────── */
+function restartScreening() {
+  state.sport=null; state.position=null; state.handicap=null;
+  state.roles=[]; state.answers={}; state.currentItem=0;
+  document.getElementById('opt-soccer').classList.remove('selected');
+  document.getElementById('opt-golf').classList.remove('selected');
+  document.getElementById('soccer-position').value='';
+  document.getElementById('golf-handicap').value='';
+  document.querySelectorAll('.chip.selected').forEach(c=>c.classList.remove('selected'));
+  goTo('screen-intro');
+}
+
+/* ── Resize ──────────────────────────────────────────── */
+window.addEventListener('resize', ()=>{
+  if (document.querySelector('.screen.active')?.id==='screen-results') {
+    drawRadar(computeScores());
+  }
+});
+
+updateTopBar();
+</script>
+</body>
+</html>
